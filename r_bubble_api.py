@@ -1,3 +1,48 @@
+'''
+This script is purely for demo purposes.
+
+In in the first function, (1) GET_custom_limit_objects, I've set up a call to our
+bubble app with default parameters (cursor=0, limit = 100) and passed in limit=10000 in the call.
+
+The return json still only returns a count of 100 items.
+'''
+import requests
+
+#(1)
+def GET_custom_limit_objects(obj: str, headers, cursor=0, limit = 100):
+    url = f"https://ifish.tech/version-test/api/1.1/obj/{obj}"
+    params = {'cursor': cursor, 'limit': limit}
+
+    try:
+        response = requests.get(url, headers=headers, params=params)
+        response.raise_for_status()
+        data = response.json()
+        return data
+
+    except requests.RequestException as e:
+        print(f"Error fetching all objects: {e}")
+        return None
+
+#our bubble credentials
+headers = {
+            'Content-type': 'application/json',
+            'Authorization': 'Bearer 3d83175353e3af62cc0d4dd5c167a855',
+        }
+
+#The object (FISH) Disbursement_new has around 16.7k entries
+return_json = GET_custom_limit_objects('(FISH) Disbursement_new', headers=headers, cursor=0, limit = 10000)
+
+print(return_json) # the whole json
+
+'''
+This is how we've made it work, using cursor to loop over each 100 records. But this is exceptionally slow.
+
+We are calling limit in correspondence with the API documentation, but still receiving 100 records.
+
+I have removed out API keys from this second function so it will not run.
+'''
+
+#(2)
 import requests
 import json
 from datetime import datetime
@@ -59,47 +104,5 @@ class BubbleAPI:
 
         return {'response': {'results': results}}
 
-    def write_to_file(self, obj: str, api_type: str, filename: str):
-        if api_type == 'single':
-            raw_obj = self.GET_single_object(obj)
-        elif api_type == 'all':
-            raw_obj = self.GET_all_objects(obj)
-        else:
-            print('Error: Please input a valid api_type')
-            return
 
-        json_obj = json.dumps(raw_obj, indent=4)
-        day = self.get_datetime()
-
-        with open(f"{day}-{filename}.json", "w") as outfile:
-            outfile.write(json_obj)
-
-    def write_snapshot_files(self):
-        # Example usage:
-        snapshot_items = [
-            ('Loan', 'all', 'test-loans-snapshot'),
-            ('Loan Application', 'all', 'test-loan-applications-snapshot'),
-            ('(FISH) Contact', 'all', 'test-contacts-snapshot'),
-            ('(FISH) Company', 'all', 'test-companies-snapshot'),
-            ('(FISH) Property', 'all', 'test-properties-snapshot'),
-            ('(FISH) Payments', 'all', 'test-payments-snapshot'),
-            ('(FISH) Funding', 'all', 'test-funding-snapshot'),
-            ('(FISH) Disbursement_new', 'all', 'test-disbursements-snapshot'),
-            ('(FISH)_Draw', 'all', 'test-draws-snapshot'),
-            ('Loan Extension', 'all', 'test-loan-extensions-snapshot'),
-            ('Loan Payoff', 'all', 'test-payoffs-snapshot'),
-            ('User', 'all', 'test-users-snapshot')
-        ]
-
-        for obj, api_type, filename in snapshot_items:
-            self.write_to_file(obj, api_type, filename)
-
-
-# Example usage:
-raw_url = 'https://ifish.tech/version-test/api/1.1/obj'
-apikey = ''
-bubble_api = BubbleAPI(raw_url, apikey)
-#print(bubble_api.GET_all_objects('Loan'))
-
-# Uncomment to test fetching and writing snapshot files
-# bubble_api.write_snapshot_files()
+#print(bubble_api.GET_all_objects('Loan')) will give us every Loan in the test database, exceeding 100, but only 100 at a time.
